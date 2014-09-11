@@ -24,6 +24,8 @@ import com.paypal.android.MEP.PayPalActivity;
 import com.paypal.android.MEP.PayPalInvoiceData;
 import com.paypal.android.MEP.PayPalInvoiceItem;
 import com.paypal.android.MEP.PayPalPayment;
+import com.paypal.android.MEP.PayPalAdvancedPayment;
+import com.paypal.android.MEP.PayPalReceiverDetails;
 
 import android.app.Activity;
 import android.content.Context;
@@ -34,15 +36,18 @@ import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 
-public class PayPalMPL extends CordovaPlugin implements OnClickListener {
+public class PayPalMPL extends org.apache.cordova.CordovaPlugin implements OnClickListener {
 
 	public static PayPalMPL thisPlugin;
+	
+	private boolean isThirdParty=true;
 	
 	private int appEnv = PayPal.ENV_NONE;
 	private String appId = "APP-80W284485P519543T";
 	
 	private int pType = PayPal.PAYMENT_TYPE_GOODS;
 	private PayPalPayment ppPayment = null;
+	private PayPalAdvancedPayment ppPaymentM = null;
 
 	private CheckoutButton ppButton = null;
 	
@@ -159,28 +164,87 @@ public class PayPalMPL extends CordovaPlugin implements OnClickListener {
 		JSONObject args = null;
 		
 		String strType = "TYPE_GOODS";
-		String strLang = "en_US";
+		String currencyType="",strLang = "en_US";
 		int nButton = PayPal.BUTTON_152x33;
 		boolean bHideButton = false;
-		this.ppPayment = new PayPalPayment();
-		this.ppPayment.setPaymentType( this.pType );
+		
+		this.isThirdParty= false;
+		
 		try {
 			args = inputs.getJSONObject(0);
-			
+			isThirdParty = args.getBoolean("isThirdParty");	
 			strLang = args.getString("lang");
 			strType = args.getString("paymentType");
 			nButton = args.getInt("showPayPalButton");
+			
 			if( nButton < PayPal.BUTTON_152x33 || nButton > PayPal.BUTTON_294x45 ) {
 				nButton = PayPal.BUTTON_152x33;
 				bHideButton = true;
 			}
-			this.ppPayment.setCurrencyType(args.getString("paymentCurrency"));
-			this.ppPayment.setRecipient(args.getString("recipient"));
-		    this.ppPayment.setDescription(args.getString("description"));
-		    this.ppPayment.setMerchantName(args.getString("merchantName"));
-			BigDecimal amount = new BigDecimal(args.getString("subTotal"));
-			amount.round(new MathContext(2, RoundingMode.HALF_UP));
-			this.ppPayment.setSubtotal(amount);
+			currencyType=args.getString("paymentCurrency");	
+			
+		    
+		    
+		    
+			if(isThirdParty){
+				this.ppPaymentM = new PayPalAdvancedPayment();
+				
+				JSONArray array = args.getJSONArray("receivers");
+				for(int i=0; i< array.length();i++){
+					
+					JSONObject item = array.getJSONObject(i);
+					PayPalReceiverDetails receiver=new PayPalReceiverDetails();
+
+					receiver.setRecipient(item.getString("recipient"));
+					
+					BigDecimal amt = new BigDecimal(args.getString("subTotal"));
+					amt.round(new MathContext(2, RoundingMode.HALF_UP));
+					receiver.setSubtotal(amt);
+					
+					receiver.setIsPrimary(item.getBoolean("isPrimary"));
+					int receiverPType;
+					String rPType=item.getString("paymentType");
+					if( rPType.equals("TYPE_GOODS") ) {
+						receiverPType = PayPal.PAYMENT_TYPE_GOODS;
+					} else if( rPType.equals("TYPE_SERVICE") ) {
+						receiverPType = PayPal.PAYMENT_TYPE_SERVICE;
+					} else if( rPType.equals("TYPE_PERSONAL") ) {
+						receiverPType = PayPal.PAYMENT_TYPE_PERSONAL;
+					} else {
+						receiverPType = PayPal.PAYMENT_TYPE_NONE;
+					}
+					receiver.setPaymentType(receiverPType);
+					
+					this.ppPaymentM.getReceivers().add(receiver);					
+				}
+				
+				this.ppPaymentM.setCurrencyType(currencyType);
+				this.ppPaymentM.setMerchantName(args.getString("merchantName"));
+				
+			}else{
+				this.ppPayment = new PayPalPayment();
+				this.ppPayment.setPaymentType( this.pType );
+				
+				
+				this.ppPayment.setCurrencyType(currencyType);
+				this.ppPayment.setRecipient(args.getString("recipient"));
+
+			    this.ppPayment.setMerchantName(args.getString("merchantName"));
+				BigDecimal amount = new BigDecimal(args.getString("subTotal"));
+				amount.round(new MathContext(2, RoundingMode.HALF_UP));
+				this.ppPayment.setSubtotal(amount);
+				
+				if( strType.equals("TYPE_GOODS") ) {
+					this.pType = PayPal.PAYMENT_TYPE_GOODS;
+				} else if( strType.equals("TYPE_SERVICE") ) {
+					this.pType = PayPal.PAYMENT_TYPE_SERVICE;
+				}else if( strType.equals("TYPE_PERSONAL") ) {
+					this.pType = PayPal.PAYMENT_TYPE_PERSONAL;
+				} else {
+					this.pType = PayPal.PAYMENT_TYPE_NONE;
+				}
+				
+			}
 			
 		} catch (JSONException e) {
 			Log.d(LOGTAG, "Got JSON Exception "+ e.getMessage());
@@ -188,15 +252,6 @@ public class PayPalMPL extends CordovaPlugin implements OnClickListener {
 			return true;
 		}
 		
-		if( strType.equals("TYPE_GOODS") ) {
-			this.pType = PayPal.PAYMENT_TYPE_GOODS;
-		} else if( strType.equals("TYPE_SERVICE") ) {
-			this.pType = PayPal.PAYMENT_TYPE_SERVICE;
-		} if( strType.equals("TYPE_PERSONAL") ) {
-			this.pType = PayPal.PAYMENT_TYPE_PERSONAL;
-		} else {
-			this.pType = PayPal.PAYMENT_TYPE_NONE;
-		}
 		
 		PayPal pp = PayPal.getInstance();
 		pp.setLanguage( strLang );
@@ -248,13 +303,23 @@ public class PayPalMPL extends CordovaPlugin implements OnClickListener {
 	}
 
 	private void checkout() {
-		if (this.ppPayment != null) {
+		
+		if ((isThirdParty&&this.ppPaymentM!=null) ||   this.ppPayment != null) {
 			PayPal pp = PayPal.getInstance();
 			
-			Intent checkoutIntent = pp.checkout(
-					this.ppPayment, 
-					cordova.getActivity().getApplicationContext(), 
-					new PayPalMPLResultDelegate() );
+			Intent checkoutIntent ;
+			
+			if(isThirdParty){
+				checkoutIntent = pp.checkout(
+						this.ppPaymentM, 
+						cordova.getActivity().getApplicationContext(), 
+						new PayPalMPLResultDelegate() );
+			}else{
+				checkoutIntent = pp.checkout(
+						this.ppPayment, 
+						cordova.getActivity().getApplicationContext(), 
+						new PayPalMPLResultDelegate() );
+			}
 			
 			cordova.getActivity().startActivityForResult(checkoutIntent,
 					REQUEST_PAYPAL_CHECKOUT);

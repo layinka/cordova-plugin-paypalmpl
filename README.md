@@ -72,4 +72,36 @@ Check the README.md in sub folder for details.
             	alert( 'PayPalMPL plugin not loaded.' );
             }
         }
+	
+	function buyGameCoinForFriends( n ) {
+            if( window.plugins && window.plugins.PayPalMPL ) {
+            	var ppm = window.plugins.PayPalMPL;
+            	ppm.setPaymentInfo({
+			'isThirdParty':true,
+			'receivers':[
+				{'recipient':friendaccount1,'subTotal':2.00,'isPrimary':false,'paymentType' : ppm.PaymentType.TYPE_PERSONAL},
+				
+				{'recipient':friendaccount2,'subTotal':2.00,'isPrimary':false,'paymentType' : ppm.PaymentType.TYPE_SERVICE},
+			],
+			'lang' : 'en_US',
+			//'paymentType' : ppm.PaymentType.TYPE_GOODS,
+			'showPayPalButton': -1,
+            		'paymentCurrency' : 'USD',
+            		//'subTotal' : 1.99,
+            		//'recipient' : 'rjfun.mobile@gmail.com',
+            		'description' : 'game coins (' + n + ')',
+            		'merchantName' : 'rjfun'
+            	}, function() {
+            		ppm.pay({}, function() {
+            			// alert( 'paypal pay done' );
+            		}, function() {
+            			alert('paypal pay failed');
+            		});
+            	}, function() {
+            		alert('paypal setPaymentInfo failed');
+            	});
+            } else {
+            	alert( 'PayPalMPL plugin not loaded.' );
+            }
+        }
         
