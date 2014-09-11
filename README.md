@@ -13,7 +13,7 @@ https://github.com/floatinghotpot/mobile-sdk.git
 ---------------------------
 To install this plugin, follow the [Command-line Interface Guide](http://cordova.apache.org/docs/en/edge/guide_cli_index.md.html#The%20Command-line%20Interface).
 
-    cordova plugin add https://github.com/floatinghotpot/cordova-plugin-paypalmpl.git
+    cordova plugin add https://github.com/layinka/cordova-plugin-paypalmpl.git
 
 Check the README.md in sub folder for details.
 
