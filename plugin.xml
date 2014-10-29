@@ -10,8 +10,8 @@
 	<author>Liming Xie</author>
 	<license>MIT</license>
 	<keywords>paypal,payment,purchase,pay,buy</keywords>
-    <repo>https://github.com/floatinghotpot/cordova-plugin-paypalmpl.git</repo>
-    <issue>https://github.com/floatinghotpot/cordova-plugin-paypalmpl/issues</issue>
+    <repo>https://github.com/layinka/cordova-plugin-paypalmpl.git</repo>
+    <issue>https://github.com/layinka/cordova-plugin-paypalmpl/issues</issue>
 
 	<engines>
 	    <engine name="cordova" version=">=3.0" />
@@ -30,7 +30,7 @@
             </feature>
         </config-file>
         <source-file src="src/android/PayPalMPL.java" target-dir="src/com/rjfun/cordova/plugin" />
-        
+        <source-file src="src/android/PayPalMPLResultDelegate.java" target-dir="src/com/rjfun/cordova/plugin" />
      </platform>
      
      <!-- ios -->
